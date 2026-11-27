@@ -243,6 +243,12 @@ function renderRoster(spin){
   }
   $('roster').innerHTML=h;
 }
+function flick(id){
+  var cells=$('roster').children,i,c;
+  for(i=0;i<cells.length;i++){c=cells[i];if(!c.dataset.id)continue;var on=+c.dataset.id===id;c.classList.toggle('sel',on);c.classList.toggle('spin',on)}
+  var p=byId(id),im=$('pic').querySelector('img');
+  if(p){if(im){im.src=p.src;im.alt=p.name}else renderHero();$('pname').textContent=p.name;$('chips').innerHTML='<span class="chip k">Tier '+p.tier+'</span>'}
+}
 function renderTeams(){
   var cur=teamOf(selId),h='';
   for(var t=0;t<TEAMS;t++){
@@ -318,8 +324,8 @@ async function roll(){
   async function reveal(id,rem,t,slot){
     var spins=9+rnd(7);
     animK++;curAnim={k:animK,spins:spins,rem:rem.slice(),id:id};save(true);
-    for(var k=0;k<spins;k++){var rid=rem[rnd(rem.length)];selId=rid;renderRoster(rid);renderHero();await sleep(50+k*12)}
-    selId=id;rem.splice(rem.indexOf(id),1);assigned[id]=true;teams[t][slot]=id;render(id);save();await sleep(380);
+    for(var k=0;k<spins;k++){var rid=rem[rnd(rem.length)];selId=rid;flick(rid);await sleep(50+k*12)}
+    selId=id;rem.splice(rem.indexOf(id),1);assigned[id]=true;teams[t][slot]=id;render(id);await sleep(380);
   }
   for(var t=0;t<pairs.length;t++){
     await reveal(pairs[t][0],remA,t,0);
@@ -412,8 +418,14 @@ function applyState(v){
   if(!isAdmin&&(v.rolling||!selId)&&v.sel&&byId(v.sel))selId=v.sel;
 }
 async function runAnim(a){
-  for(var k=0;k<a.spins;k++){var rid=a.rem[rnd(a.rem.length)];selId=rid;renderRoster(rid);renderHero();await sleep(50+k*12)}
-  selId=a.id;render(a.id);await sleep(380);
+  var t0=performance.now(),at=0;
+  for(var k=0;k<a.spins;k++){
+    if(stash&&stash.anim&&stash.anim.k>a.k)break;
+    var rid=a.rem[rnd(a.rem.length)];selId=rid;flick(rid);
+    at+=50+k*12;var w=t0+at-performance.now();if(w>0)await sleep(w);
+  }
+  selId=a.id;render(a.id);
+  if(!(stash&&stash.anim&&stash.anim.k>a.k))await sleep(380);
 }
 function handleState(v){
   if(animBusy){stash=v;return}
