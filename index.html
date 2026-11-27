@@ -192,7 +192,7 @@ const OWNER_CODE="lethanhtung";
 var isAdmin=false;
 try{var q=new URLSearchParams(location.search).get('admin');if(q)localStorage.setItem('bd_owner',q);isAdmin=localStorage.getItem('bd_owner')===OWNER_CODE}catch(e){}
 if(!isAdmin)document.body.classList.add('view');
-var db=null,ready=false,synced={},syncedLogo='',pend=null,saveT=null,writeQ=Promise.resolve(),remoteRolling=false;
+var db=null,ready=false,synced={},syncedLogo='',pend=null,saveT=null,writeQ=Promise.resolve(),remoteRolling=false,curAnim=null,animK=0,animBusy=false,lastK=0,stash=null;
 var MAX=20,TEAMS=10;
 var players=[],selId=null,rolling=false,assigned={},teams=[],uid=0,blocks={};
 var $=function(i){return document.getElementById(i)};
@@ -313,10 +313,11 @@ async function roll(){
   if(rolling||!isAdmin)return;
   var pairs=plan();
   if(!pairs){toast('Không thể chia: các cặp bị chặn làm không còn cách ghép nào. Hãy bỏ bớt cặp chặn.');return}
-  rolling=true;emptyTeams();render();save(true);
+  rolling=true;curAnim=null;emptyTeams();render();save(true);
   var remA=pairs.map(function(p){return p[0]}),remB=pairs.map(function(p){return p[1]});
   async function reveal(id,rem,t,slot){
     var spins=9+rnd(7);
+    animK++;curAnim={k:animK,spins:spins,rem:rem.slice(),id:id};save(true);
     for(var k=0;k<spins;k++){var rid=rem[rnd(rem.length)];selId=rid;renderRoster(rid);renderHero();await sleep(50+k*12)}
     selId=id;rem.splice(rem.indexOf(id),1);assigned[id]=true;teams[t][slot]=id;render(id);save();await sleep(380);
   }
@@ -328,7 +329,7 @@ async function roll(){
   var bench=players.filter(function(p){return !inTeam[p.id]}).map(function(p){return p.name});
   rolling=false;render();
   $('bench').textContent=bench.length?'Dự bị (không có người cặp): '+bench.join(', '):'';
-  save(true);toast('Đã chia xong '+pairs.length+' đội!');
+  curAnim=null;save(true);toast('Đã chia xong '+pairs.length+' đội!');
 }
 $('roster').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||rolling)return;if(b.dataset.add){pickFile();return}selId=+b.dataset.id;render()});
 $('teams').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||rolling)return;var t=teams[+b.dataset.team],id=t[0]||t[1];if(id){selId=id;render()}});
@@ -377,7 +378,7 @@ function netErr(e){toast('Lỗi mạng/Firebase: '+((e&&e.code)||(e&&e.message)|
 function save(now){
   if(!isAdmin||!db||!ready)return;
   var flat=[];teams.forEach(function(t){flat.push(t[0]||0,t[1]||0)});
-  pend={teams:flat,blocks:JSON.parse(JSON.stringify(blocks)),sel:selId||0,rolling:rolling,bench:$('bench').textContent,at:Date.now()};
+  pend={teams:flat,blocks:JSON.parse(JSON.stringify(blocks)),sel:selId||0,rolling:rolling,anim:curAnim,bench:$('bench').textContent,at:Date.now()};
   clearTimeout(saveT);saveT=setTimeout(flush,now?0:300);
 }
 function flush(){
@@ -410,6 +411,18 @@ function applyState(v){
   remoteRolling=!!v.rolling;
   if(!isAdmin&&(v.rolling||!selId)&&v.sel&&byId(v.sel))selId=v.sel;
 }
+async function runAnim(a){
+  for(var k=0;k<a.spins;k++){var rid=a.rem[rnd(a.rem.length)];selId=rid;renderRoster(rid);renderHero();await sleep(50+k*12)}
+  selId=a.id;render(a.id);await sleep(380);
+}
+function handleState(v){
+  if(animBusy){stash=v;return}
+  if(v.rolling&&v.anim&&v.anim.k!==lastK&&v.anim.rem&&v.anim.rem.length){
+    lastK=v.anim.k;applyState(v);render();
+    animBusy=true;
+    runAnim(v.anim).then(function(){animBusy=false;if(stash){var x=stash;stash=null;handleState(x)}});
+  }else{applyState(v);render()}
+}
 async function init(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -417,7 +430,11 @@ async function init(){
     if(isAdmin){
       var auth=firebase.auth();
       var u=await new Promise(function(res){var off=auth.onAuthStateChanged(function(x){off();res(x)})});
-      if(!u)await auth.signInAnonymously();
+      if(!u)u=(await auth.signInAnonymously()).user;
+      var tag=document.createElement('div');tag.style.cssText='position:fixed;left:8px;bottom:8px;z-index:9;font:11px/1.3 monospace;background:rgba(255,255,255,.8);border-radius:8px;padding:5px 8px;cursor:pointer;max-width:90vw;word-break:break-all';
+      tag.textContent='Admin UID: '+u.uid+' (bấm để copy)';
+      tag.onclick=function(){try{navigator.clipboard.writeText(u.uid);toast('Đã copy UID')}catch(e){}};
+      document.body.appendChild(tag);
     }
     var gotP=false,gotS=false;
     function done(){if(gotP&&gotS&&!ready){ready=true}}
@@ -427,7 +444,9 @@ async function init(){
     },netErr);
     db.doc('chia/state').onSnapshot(function(d){
       if(isAdmin&&gotS)return;
-      gotS=true;if(d.exists)applyState(d.data());render();done();
+      gotS=true;
+      if(d.exists){if(isAdmin){applyState(d.data());render()}else handleState(d.data())}else render();
+      done();
     },netErr);
     db.doc('chia/logo').onSnapshot(function(d){
       if(isAdmin&&syncedLogo)return;
