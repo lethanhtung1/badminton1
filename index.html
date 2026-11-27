@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cầu lông - Chia đội</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E🏸%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap">
 <style>
 :root{--yellow:#ffc629;--ink:#1d1d1b;--bg:#ffffff;--soft:#f6f4ee;--line:#ebe7dc;--mute:#7b776c;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -113,18 +112,21 @@ select,input[type=number]{background:rgba(255,255,255,.72);border-color:rgba(255
 .chip.w{background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 #toast{background:rgba(29,29,27,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 @media(max-width:900px){.card{top:auto}}
-.live{display:none;margin-right:6px}
-body.view .live{display:inline-flex}
-body.view .panels,body.view .ctrl,body.view .tip,body.view #addBtn,body.view #resetBtn,body.view #goBtn,body.view #logoBtn:not(.has){display:none}
-body.view main{pointer-events:none}
 @media(prefers-reduced-motion:reduce){body::before{animation:none}.cell{transition:none}.cell.spin{transform:none}}
+body.view #addBtn,body.view #resetBtn,body.view #goBtn,body.view .panels,body.view .ctrl,body.view .tip,body.view .cell.add{display:none!important}
+body.view #logoBtn:not(.has){display:none}
+body.view #pname{cursor:default}
+.live{display:none;align-items:center;gap:6px;font:700 13px "Outfit",sans-serif;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9)}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:#e5322d;animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+body.view .live{display:inline-flex}
 </style>
 </head>
 <body>
 <header>
   <button class="logobtn" id="logoBtn" aria-label="Thêm logo">+ Thêm logo</button>
-  <span class="chip k live">● Đang xem trực tiếp</span>
   <div class="title">Chia đội cầu lông<small>Mỗi đội 1 người tier A + 1 người tier B</small></div>
+  <span class="live" id="live">Xem trực tiếp</span>
   <button class="btn" id="addBtn">Tải ảnh lên</button>
   <button class="btn" id="resetBtn">Xóa kết quả</button>
   <button class="btn go" id="goBtn">Chia đội ngẫu nhiên</button>
@@ -170,11 +172,29 @@ body.view main{pointer-events:none}
 <input type="file" id="file" accept="image/*" multiple hidden>
 <input type="file" id="logoFile" accept="image/*" hidden>
 <div id="toast" role="status"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyCemRaIDQej6uspfgAYUojakkPvaOAZvpo",
+  authDomain:"badmintons-3c99e.firebaseapp.com",
+  projectId:"badmintons-3c99e",
+  storageBucket:"badmintons-3c99e.firebasestorage.app",
+  messagingSenderId:"593221857109",
+  appId:"1:593221857109:web:9443a0913d79cdc591c9dc"
+};
+/* Mã bí mật của bạn. Mở trang bằng  ?admin=MÃ  một lần để được sửa. Người khác chỉ xem. */
+const OWNER_CODE="lethanhtung";
+</script>
 <script>
 (function(){
+var isAdmin=false;
+try{var q=new URLSearchParams(location.search).get('admin');if(q)localStorage.setItem('bd_owner',q);isAdmin=localStorage.getItem('bd_owner')===OWNER_CODE}catch(e){}
+if(!isAdmin)document.body.classList.add('view');
+var db=null,ready=false,synced={},syncedLogo='',pend=null,saveT=null,writeQ=Promise.resolve(),remoteRolling=false;
 var MAX=20,TEAMS=10;
 var players=[],selId=null,rolling=false,assigned={},teams=[],uid=0,blocks={};
-var db=null,isHost=true,ready=false,saveT=null,saved={},lastRollId=0,lastState=null;
 var $=function(i){return document.getElementById(i)};
 var fileIn=$('file');
 function rnd(n){var a=new Uint32Array(1),lim=Math.floor(4294967296/n)*n,x;do{crypto.getRandomValues(a);x=a[0]}while(x>=lim);return x%n}
@@ -189,22 +209,30 @@ function teamOf(id){for(var t=0;t<TEAMS;t++)if(teams[t][0]===id||teams[t][1]===i
 function bkey(a,b){return Math.min(a,b)+'-'+Math.max(a,b)}
 function ids(tier){return players.filter(function(p){return p.tier===tier}).map(function(p){return p.id})}
 
+function shrink(file,W,H,png,cb){
+  var r=new FileReader();
+  r.onload=function(){var img=new Image();img.onload=function(){
+    var c=document.createElement('canvas'),k,w,h;
+    if(png){k=Math.min(W/img.width,H/img.height,1);w=Math.round(img.width*k);h=Math.round(img.height*k);c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);cb(c.toDataURL('image/png'))}
+    else{c.width=W;c.height=H;k=Math.max(W/img.width,H/img.height);w=img.width*k;h=img.height*k;c.getContext('2d').drawImage(img,(W-w)/2,(H-h)/2,w,h);cb(c.toDataURL('image/jpeg',.72))}
+  };img.onerror=function(){toast('Không đọc được ảnh')};img.src=r.result};
+  r.readAsDataURL(file);
+}
 function addFiles(list){
+  if(!isAdmin)return;
   var files=Array.prototype.slice.call(list).filter(function(f){return /^image\//.test(f.type)});
   if(files.length>MAX-players.length)toast('Tối đa '+MAX+' người');
   files.slice(0,MAX-players.length).forEach(function(f){
-    var r=new FileReader();
-    r.onload=function(){shrink(r.result).then(function(src){
+    shrink(f,360,480,false,function(src){
       if(players.length>=MAX)return;
       var tier=ids('A').length<=ids('B').length?'A':'B';
       players.push({id:++uid,name:f.name.replace(/\.[^.]+$/,'').slice(0,20),src:src,tier:tier});
-      if(selId===null)selId=uid;render();
-    })};
-    r.readAsDataURL(f);
+      if(selId===null)selId=uid;render();save();
+    });
   });
   fileIn.value='';
 }
-function pickFile(){if(!rolling)fileIn.click()}
+function pickFile(){if(!rolling&&isAdmin)fileIn.click()}
 
 function renderRoster(spin){
   var h='';
@@ -256,7 +284,6 @@ function render(spin){
   var pairs=Math.min(ids('A').length,ids('B').length);
   $('goBtn').disabled=rolling||pairs<1;$('resetBtn').disabled=rolling;$('delBtn').disabled=rolling||!n;
   $('tierRnd').disabled=rolling||!n;$('blockBtn').disabled=rolling;
-  save();
 }
 function blocked(a,b){return !!blocks[bkey(a,b)]}
 function match(A,B){
@@ -283,21 +310,15 @@ function plan(){
   return null;
 }
 async function roll(){
-  if(rolling)return;
+  if(rolling||!isAdmin)return;
   var pairs=plan();
   if(!pairs){toast('Không thể chia: các cặp bị chặn làm không còn cách ghép nào. Hãy bỏ bớt cặp chặn.');return}
-  emptyTeams();
-  if(db&&isHost)pushState({roll:{id:Date.now(),pairs:pairs.map(function(p){return{a:p[0],b:p[1]}})},rolling:true}).catch(function(){});
-  await animate(pairs);
-  if(db&&isHost)pushState({}).catch(function(){});
-}
-async function animate(pairs){
-  rolling=true;emptyTeams();render();
+  rolling=true;emptyTeams();render();save(true);
   var remA=pairs.map(function(p){return p[0]}),remB=pairs.map(function(p){return p[1]});
   async function reveal(id,rem,t,slot){
     var spins=9+rnd(7);
     for(var k=0;k<spins;k++){var rid=rem[rnd(rem.length)];selId=rid;renderRoster(rid);renderHero();await sleep(50+k*12)}
-    selId=id;rem.splice(rem.indexOf(id),1);assigned[id]=true;teams[t][slot]=id;render(id);await sleep(380);
+    selId=id;rem.splice(rem.indexOf(id),1);assigned[id]=true;teams[t][slot]=id;render(id);save();await sleep(380);
   }
   for(var t=0;t<pairs.length;t++){
     await reveal(pairs[t][0],remA,t,0);
@@ -307,110 +328,117 @@ async function animate(pairs){
   var bench=players.filter(function(p){return !inTeam[p.id]}).map(function(p){return p.name});
   rolling=false;render();
   $('bench').textContent=bench.length?'Dự bị (không có người cặp): '+bench.join(', '):'';
-  toast('Đã chia xong '+pairs.length+' đội!');
+  save(true);toast('Đã chia xong '+pairs.length+' đội!');
 }
 $('roster').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||rolling)return;if(b.dataset.add){pickFile();return}selId=+b.dataset.id;render()});
 $('teams').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||rolling)return;var t=teams[+b.dataset.team],id=t[0]||t[1];if(id){selId=id;render()}});
-$('pname').addEventListener('input',function(e){var p=byId(selId);if(!p)return;p.name=e.target.textContent.slice(0,20)||'Không tên';renderRoster();renderTeams();renderPanels();save()});
+$('pname').addEventListener('input',function(e){if(!isAdmin)return;var p=byId(selId);if(!p)return;p.name=e.target.textContent.slice(0,20)||'Không tên';renderRoster();renderTeams();renderPanels();save()});
 $('pname').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();e.target.blur()}});
 $('pname').addEventListener('blur',renderHero);
-function setTier(t){var p=byId(selId);if(!p||rolling)return;p.tier=t;emptyTeams();render()}
+function setTier(t){var p=byId(selId);if(!p||rolling||!isAdmin)return;p.tier=t;emptyTeams();render();save(true)}
 $('tA').addEventListener('click',function(){setTier('A')});
 $('tB').addEventListener('click',function(){setTier('B')});
 $('tierRnd').addEventListener('click',function(){
-  if(rolling||!players.length)return;
+  if(rolling||!players.length||!isAdmin)return;
   var n=parseInt($('nA').value,10);
   if(isNaN(n)||n<0||n>players.length){toast('Số người tier A phải từ 0 đến '+players.length);return}
   var order=shuffle(players.map(function(p){return p.id}));
   players.forEach(function(p){p.tier=order.indexOf(p.id)<n?'A':'B'});
-  emptyTeams();render();toast('Đã chia ngẫu nhiên '+n+' người tier A, '+(players.length-n)+' người tier B');
+  emptyTeams();render();save(true);toast('Đã chia ngẫu nhiên '+n+' người tier A, '+(players.length-n)+' người tier B');
 });
 $('blockBtn').addEventListener('click',function(){
   var a=+$('selA').value,b=+$('selB').value;
   if(!a||!b){toast('Chọn một người tier A và một người tier B');return}
-  blocks[bkey(a,b)]=[a,b];emptyTeams();render();
+  if(!isAdmin)return;blocks[bkey(a,b)]=[a,b];emptyTeams();render();save(true);
 });
-$('blist').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;delete blocks[b.dataset.k];render()});
+$('blist').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||!isAdmin)return;delete blocks[b.dataset.k];render();save(true)});
 $('delBtn').addEventListener('click',function(){
-  if(rolling)return;var id=selId;
+  if(rolling||!isAdmin)return;var id=selId;
   players=players.filter(function(p){return p.id!==id});
   Object.keys(blocks).forEach(function(k){if(blocks[k][0]===id||blocks[k][1]===id)delete blocks[k]});
-  emptyTeams();selId=players.length?players[0].id:null;render();
+  emptyTeams();selId=players.length?players[0].id:null;render();save(true);
 });
 $('addBtn').addEventListener('click',pickFile);
 $('goBtn').addEventListener('click',roll);
-$('resetBtn').addEventListener('click',function(){if(!rolling){emptyTeams();render()}});
+$('resetBtn').addEventListener('click',function(){if(!rolling&&isAdmin){emptyTeams();render();save(true)}});
 fileIn.addEventListener('change',function(e){addFiles(e.target.files)});
-$('logoBtn').addEventListener('click',function(){$('logoFile').click()});
+$('logoBtn').addEventListener('click',function(){if(isAdmin)$('logoFile').click()});
 $('logoFile').addEventListener('change',function(e){
-  var f=e.target.files[0];if(!f||!/^image\//.test(f.type))return;
-  var r=new FileReader();r.onload=function(){var b=$('logoBtn');b.className='logobtn has';b.innerHTML='<img src="'+r.result+'" alt="Logo">'};
-  r.readAsDataURL(f);e.target.value='';
+  var f=e.target.files[0];if(!f||!isAdmin||!/^image\//.test(f.type))return;
+  shrink(f,240,240,true,function(src){setLogo(src);save(true)});e.target.value='';
 });
 document.addEventListener('dragover',function(e){e.preventDefault()});
-document.addEventListener('drop',function(e){e.preventDefault();if(!rolling&&e.dataTransfer)addFiles(e.dataTransfer.files)});
-/* ===== Đồng bộ trực tiếp ===== */
-function shrink(src){return new Promise(function(res){var im=new Image();im.onload=function(){var w=Math.min(240,im.width),h=Math.round(im.height*w/im.width),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);res(c.toDataURL('image/jpeg',.75))};im.onerror=function(){res(src)};im.src=src})}
-function pushState(x){
-  var s={teams:teams.map(function(t){return{a:t[0],b:t[1]}}),blocks:blocks,selId:selId,uid:uid,bench:$('bench').textContent,roll:null,rolling:false};
-  for(var k in x)s[k]=x[k];
-  return db.doc('state/main').set(s);
+document.addEventListener('drop',function(e){e.preventDefault();if(!rolling&&isAdmin&&e.dataTransfer)addFiles(e.dataTransfer.files)});
+
+/* ---- đồng bộ Firebase ---- */
+function setLogo(src){var b=$('logoBtn');if(!src)return;b.className='logobtn has';b.innerHTML='<img src="'+src+'" alt="Logo">'}
+function currentLogo(){var i=$('logoBtn').querySelector('img');return i?i.src:''}
+function netErr(e){toast('Lỗi mạng/Firebase: '+((e&&e.code)||(e&&e.message)||''))}
+function save(now){
+  if(!isAdmin||!db||!ready)return;
+  var flat=[];teams.forEach(function(t){flat.push(t[0]||0,t[1]||0)});
+  pend={teams:flat,blocks:JSON.parse(JSON.stringify(blocks)),sel:selId||0,rolling:rolling,bench:$('bench').textContent,at:Date.now()};
+  clearTimeout(saveT);saveT=setTimeout(flush,now?0:300);
 }
-function save(){if(!db||!isHost||!ready||rolling)return;clearTimeout(saveT);saveT=setTimeout(doSave,500)}
-async function doSave(){
-  if(rolling)return;
-  try{
-    var cur={};
-    for(var i=0;i<players.length;i++){var p=players[i];cur[p.id]=1;
-      var j=JSON.stringify({id:p.id,name:p.name,tier:p.tier,src:p.src,n:i});
-      if(saved[p.id]!==j){await db.collection('players').doc('p'+p.id).set(JSON.parse(j));saved[p.id]=j}}
-    for(var k in saved)if(!cur[k]){await db.collection('players').doc('p'+k).delete();delete saved[k]}
-    await pushState({});
-  }catch(e){console.error(e)}
+function flush(){
+  var st=pend;if(!st)return;pend=null;
+  var plist=players.map(function(p){return{id:p.id,name:p.name,tier:p.tier,src:p.src}});
+  var logo=currentLogo();
+  writeQ=writeQ.then(function(){
+    var ops=[];
+    plist.forEach(function(p){var key=JSON.stringify([p.name,p.tier,p.src]);if(synced[p.id]!==key){synced[p.id]=key;ops.push(db.doc('chia_players/p'+p.id).set(p))}});
+    Object.keys(synced).forEach(function(k){if(!plist.some(function(p){return String(p.id)===k})){delete synced[k];ops.push(db.doc('chia_players/p'+k).delete())}});
+    if(logo&&logo!==syncedLogo){syncedLogo=logo;ops.push(db.doc('chia/logo').set({src:logo}))}
+    ops.push(db.doc('chia/state').set(st));
+    return Promise.all(ops);
+  }).catch(netErr);
 }
-function setFrom(s){
-  blocks=s.blocks||{};
-  selId=s.selId==null?(players[0]?players[0].id:null):s.selId;
-  teams=[];for(var i=0;i<TEAMS;i++){var t=(s.teams||[])[i];teams.push([t?t.a:null,t?t.b:null])}
+function applyPlayers(snap){
+  var arr=[];
+  snap.docs.forEach(function(d){var v=d.data();if(v&&v.id&&v.src)arr.push({id:v.id,name:v.name||'',src:v.src,tier:v.tier==='B'?'B':'A'})});
+  arr.sort(function(a,b){return a.id-b.id});
+  players=arr;uid=arr.reduce(function(m,p){return Math.max(m,p.id)},0);
+  if(isAdmin){synced={};arr.forEach(function(p){synced[p.id]=JSON.stringify([p.name,p.tier,p.src])})}
+  if(!byId(selId))selId=arr.length?arr[0].id:null;
+}
+function applyState(v){
+  var f=v.teams||[];teams=[];
+  for(var i=0;i<TEAMS;i++)teams.push([f[2*i]||null,f[2*i+1]||null]);
   assigned={};teams.forEach(function(t){if(t[0])assigned[t[0]]=true;if(t[1])assigned[t[1]]=true});
-  $('bench').textContent=s.bench||'';
+  blocks=v.blocks||{};
+  $('bench').textContent=v.bench||'';
+  remoteRolling=!!v.rolling;
+  if(!isAdmin&&(v.rolling||!selId)&&v.sel&&byId(v.sel))selId=v.sel;
 }
-function applyState(s){
-  if(rolling)return;
-  if(s.rolling&&s.roll){
-    if(s.roll.id!==lastRollId){lastRollId=s.roll.id;animate(s.roll.pairs.map(function(p){return[p.a,p.b]})).then(function(){if(lastState)applyState(lastState)})}
-    return;
-  }
-  setFrom(s);render();
-}
-(async function(){
+async function init(){
   try{
-    var c=window.claude;if(!c||!c.use)return;
-    db=await c.use('db');if(!db)return;
-    var u=await c.use('user');
-    isHost=u?await u.canEdit():false;
-    if(!isHost){document.body.classList.add('view');$('pname').setAttribute('contenteditable','false')}
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.firestore();
+    if(isAdmin){
+      var auth=firebase.auth();
+      var u=await new Promise(function(res){var off=auth.onAuthStateChanged(function(x){off();res(x)})});
+      if(!u)await auth.signInAnonymously();
+    }
     var gotP=false,gotS=false;
-    function chk(){if(gotP&&gotS)ready=true}
-    function fail(){toast('Không kết nối được để đồng bộ')}
-    db.collection('players').onSnapshot(function(q){
-      var first=!gotP;gotP=true;
-      if(isHost&&!first)return;
-      var arr=q.docs.map(function(d){return d.data()}).sort(function(a,b){return a.n-b.n});
-      if(isHost&&arr.length===0&&players.length)return chk();
-      players=arr;arr.forEach(function(p,i){uid=Math.max(uid,p.id);saved[p.id]=JSON.stringify({id:p.id,name:p.name,tier:p.tier,src:p.src,n:i})});
-      if(selId===null&&arr.length)selId=arr[0].id;
-      chk();if(!rolling)render();
-    },fail);
-    db.doc('state/main').onSnapshot(function(d){
-      var first=!gotS;gotS=true;
-      var s=d.exists?d.data():null;
-      if(s){uid=Math.max(uid,s.uid||0);if(isHost){if(first){s.rolling=false;setFrom(s);render()}}else{lastState=s;applyState(s)}}
-      chk();
-    },fail);
-  }catch(e){console.error(e)}
-})();
+    function done(){if(gotP&&gotS&&!ready){ready=true}}
+    db.collection('chia_players').onSnapshot(function(snap){
+      if(isAdmin&&gotP)return;
+      gotP=true;applyPlayers(snap);render();done();
+    },netErr);
+    db.doc('chia/state').onSnapshot(function(d){
+      if(isAdmin&&gotS)return;
+      gotS=true;if(d.exists)applyState(d.data());render();done();
+    },netErr);
+    db.doc('chia/logo').onSnapshot(function(d){
+      if(isAdmin&&syncedLogo)return;
+      if(d.exists&&d.data().src){syncedLogo=d.data().src;setLogo(d.data().src)}
+    },function(){});
+    setTimeout(function(){if(!ready){ready=true;toast('Tải dữ liệu chậm, kiểm tra mạng')}},8000);
+  }catch(e){netErr(e)}
+}
+if(!isAdmin){$('pname').setAttribute('contenteditable','false');$('pname').removeAttribute('title')}
 render();
+init();
 })();
 </script>
 </body>
