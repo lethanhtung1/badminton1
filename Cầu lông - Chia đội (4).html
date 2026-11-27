@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cầu lông - Chia đội</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+:root{--yellow:#ffc629;--ink:#1d1d1b;--bg:#ffffff;--soft:#f6f4ee;--line:#ebe7dc;--mute:#7b776c;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"DM Sans","Segoe UI",system-ui,sans-serif;min-height:100vh}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 28px;border-bottom:1px solid var(--line)}
+.logobtn{display:flex;align-items:center;height:52px;min-width:120px;padding:0 16px;border:1.5px dashed #cfc9b8;border-radius:999px;background:var(--soft);color:var(--mute);font-size:14px;font-weight:500}
+.logobtn:hover{border-color:var(--ink);color:var(--ink)}
+.logobtn.has{border:0;padding:0;background:none;min-width:0}
+.logobtn img{height:52px;max-width:220px;display:block;object-fit:contain}
+.title{font:700 22px "Outfit",sans-serif;margin-right:auto}
+.title small{display:block;font:400 13px "DM Sans",sans-serif;color:var(--mute);margin-top:1px}
+.btn{border:0;background:var(--soft);padding:12px 20px;border-radius:999px;font-weight:700;font-size:14px;transition:background .15s}
+.btn:hover{background:var(--line)}
+.btn.go{background:var(--yellow);font:700 16px "Outfit",sans-serif;padding:13px 28px}
+.btn.go:hover{background:#ffb800}
+.btn.sm{padding:8px 16px;font-size:13px;background:var(--ink);color:#fff}
+.btn.sm:hover{background:#3a3a36}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+main{display:grid;grid-template-columns:1fr minmax(320px,440px);gap:32px;max-width:1180px;margin:0 auto;padding:26px 28px 40px;align-items:start}
+.card{position:sticky;top:20px}
+.photo{position:relative;aspect-ratio:3/4;border-radius:32px;overflow:hidden;background:var(--soft);box-shadow:0 12px 40px rgba(29,29,27,.12)}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.photo .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);font-size:15px;text-align:center;padding:30px}
+.photo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:46%;background:linear-gradient(transparent,rgba(0,0,0,.72));pointer-events:none}
+.info{position:absolute;left:24px;right:24px;bottom:22px;z-index:2;color:#fff}
+.pname{margin:0 0 10px;font:800 40px/1.05 "Outfit",sans-serif;outline:none;word-break:break-word}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--yellow);color:var(--ink);font-weight:700;font-size:14px;padding:6px 14px;border-radius:999px}
+.chip.w{background:rgba(255,255,255,.92)}
+.chip.k{background:var(--ink);color:#fff}
+.ctrl{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--soft);border-radius:999px;padding:4px}
+.seg button{border:0;background:none;padding:8px 20px;border-radius:999px;font:700 14px "Outfit",sans-serif}
+.seg button.on{background:var(--yellow)}
+.tip{font-size:13px;color:var(--mute);text-align:center;margin:10px 0 0}
+h3{font:700 16px "Outfit",sans-serif;margin:0 0 12px;display:flex;justify-content:space-between;align-items:baseline}
+h3 span{font:400 13px "DM Sans",sans-serif;color:var(--mute)}
+.teams{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}
+.bench{font-size:13px;color:var(--mute);min-height:18px;margin-bottom:20px}
+.tslot{position:relative;aspect-ratio:3/4;border-radius:18px;border:0;background:var(--soft);display:flex;overflow:hidden;padding:0;color:#b9b3a2;align-items:center;justify-content:center;font:500 34px "Outfit",sans-serif}
+.tslot.cur{box-shadow:0 0 0 3px var(--ink)}
+.tslot img{width:50%;height:100%;object-fit:cover;display:block}
+.tslot em{width:50%;height:100%;background:var(--line)}
+.tslot i{position:absolute;left:6px;bottom:6px;background:var(--yellow);color:var(--ink);font:700 12px/1 "Outfit",sans-serif;font-style:normal;min-width:22px;height:22px;border-radius:999px;display:grid;place-items:center;padding:0 6px}
+.roster{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.cell{position:relative;aspect-ratio:3/4;border-radius:16px;border:0;background:var(--soft);overflow:hidden;padding:0;color:#b9b3a2;font:500 28px "Outfit",sans-serif;transition:transform .15s}
+.cell img{width:100%;height:100%;object-fit:cover;display:block}
+.cell .nm{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.7));color:#fff;font:600 11px "DM Sans",sans-serif;padding:14px 4px 5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell .tb{position:absolute;top:6px;left:6px;width:22px;height:22px;border-radius:50%;font:800 12px/22px "Outfit",sans-serif;text-align:center;background:var(--yellow);color:var(--ink)}
+.cell .tb.B{background:var(--ink);color:#fff}
+.cell.add{border:1.5px dashed #d6d0bf}
+.cell.add:hover{background:#fff4d1;color:var(--ink);border-color:var(--yellow)}
+.cell:not(.add):hover{transform:translateY(-2px)}
+.cell.sel{box-shadow:0 0 0 3px var(--yellow),0 0 0 5px var(--ink)}
+.cell.spin{box-shadow:0 0 0 4px var(--ink);transform:scale(1.05);z-index:2}
+.cell.done img{filter:grayscale(1);opacity:.35}
+.cell.done::after{content:"✓";position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--yellow);color:var(--ink);font:800 13px/22px "Outfit",sans-serif;text-align:center}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+.panel{background:var(--soft);border-radius:22px;padding:16px}
+.panel p{margin:0 0 12px;font-size:13px;color:var(--mute);line-height:1.45}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+select,input[type=number]{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:9px 10px;min-width:0;flex:1}
+input[type=number]{width:70px;flex:none}
+.tcount{font-weight:700;font-size:14px;margin-bottom:10px}
+.blist{display:flex;flex-direction:column;gap:6px}
+.bitem{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border-radius:12px;padding:7px 8px 7px 12px;font-size:13px;font-weight:500}
+.bitem button{border:0;background:var(--soft);border-radius:999px;width:24px;height:24px;font-weight:700;line-height:1}
+.bitem button:hover{background:var(--yellow)}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:999px;font-weight:700;display:none;z-index:9;max-width:90vw;text-align:center}
+@media(max-width:900px){
+ main{grid-template-columns:1fr;gap:22px;padding:18px 16px 40px}
+ .card{position:static;order:-1;max-width:420px;margin:0 auto;width:100%}
+ header{padding:12px 16px}
+ .roster{grid-template-columns:repeat(4,1fr)}
+ .panels{grid-template-columns:1fr}
+}
+body{background:#fdfaf1;position:relative;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:-12%;z-index:-1;background:radial-gradient(40% 40% at 14% 18%,rgba(255,198,41,.55),transparent 70%),radial-gradient(34% 34% at 86% 14%,rgba(255,140,170,.34),transparent 70%),radial-gradient(40% 40% at 82% 86%,rgba(120,170,255,.36),transparent 70%),radial-gradient(34% 34% at 18% 92%,rgba(130,230,190,.38),transparent 70%);animation:drift 18s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate3d(3%,2%,0) scale(1.08)}}
+header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5);border-bottom:1px solid rgba(255,255,255,.75)}
+.panel{background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.8);-webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);box-shadow:0 8px 32px rgba(60,50,20,.08)}
+.card{top:92px;background:rgba(255,255,255,.42);padding:12px;border-radius:42px;border:1px solid rgba(255,255,255,.85);-webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);box-shadow:0 20px 60px rgba(60,50,20,.14)}
+.photo{border-radius:30px;box-shadow:none}
+.tslot,.cell{background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.85);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(60,50,20,.06)}
+.cell.add{border:1.5px dashed rgba(29,29,27,.28)}
+.cell.sel{box-shadow:0 0 0 3px var(--yellow),0 0 0 5px var(--ink)}
+.cell.spin{box-shadow:0 0 0 4px var(--ink)}
+.tslot.cur{box-shadow:0 0 0 3px var(--ink)}
+.tslot em{background:rgba(255,255,255,.5)}
+.btn{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.btn:hover{background:rgba(255,255,255,.9)}
+.btn.go{background:rgba(255,198,41,.92);border-color:rgba(255,255,255,.6)}
+.btn.go:hover{background:#ffb800}
+.btn.sm{background:rgba(29,29,27,.88);color:#fff;border:0}
+.btn.sm:hover{background:#3a3a36}
+.seg,.logobtn{background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.seg{border:1px solid rgba(255,255,255,.85)}
+.logobtn.has{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+select,input[type=number]{background:rgba(255,255,255,.72);border-color:rgba(255,255,255,.9)}
+.bitem{background:rgba(255,255,255,.65)}
+.chip.w{background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+#toast{background:rgba(29,29,27,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+@media(max-width:900px){.card{top:auto}}
+@media(prefers-reduced-motion:reduce){body::before{animation:none}.cell{transition:none}.cell.spin{transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <button class="logobtn" id="logoBtn" aria-label="Thêm logo">+ Thêm logo</button>
+  <div class="title">Chia đội cầu lông<small>Mỗi đội 1 người tier A + 1 người tier B</small></div>
+  <button class="btn" id="addBtn">Tải ảnh lên</button>
+  <button class="btn" id="resetBtn">Xóa kết quả</button>
+  <button class="btn go" id="goBtn">Chia đội ngẫu nhiên</button>
+</header>
+<main>
+  <div>
+    <h3>Các đội</h3>
+    <div class="teams" id="teams"></div>
+    <div class="bench" id="bench"></div>
+    <h3>Vận động viên <span id="count"></span></h3>
+    <div class="roster" id="roster"></div>
+    <div class="panels">
+      <section class="panel" aria-label="Chia tier">
+        <h3>Chia tier</h3>
+        <div class="tcount" id="tcount"></div>
+        <p>Chọn tier cho từng người ở thẻ bên phải, hoặc để máy chia ngẫu nhiên.</p>
+        <div class="row"><input type="number" id="nA" min="0" max="20" aria-label="Số người tier A"><span>người tier A</span><button class="btn sm" id="tierRnd">Chia tier ngẫu nhiên</button></div>
+      </section>
+      <section class="panel" aria-label="Chặn cặp">
+        <h3>Chặn cặp đánh chung</h3>
+        <p>Hai người được chọn sẽ không bao giờ rơi vào cùng một đội.</p>
+        <div class="row"><select id="selA" aria-label="Người tier A"></select><select id="selB" aria-label="Người tier B"></select></div>
+        <div class="row"><button class="btn sm" id="blockBtn">Chặn cặp này</button></div>
+        <div class="blist" id="blist"></div>
+      </section>
+    </div>
+  </div>
+  <aside class="card" aria-live="polite">
+    <div class="photo">
+      <div id="pic"></div>
+      <div class="info">
+        <h2 class="pname" id="pname" contenteditable="plaintext-only" spellcheck="false" title="Bấm để đổi tên"></h2>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+    <div class="ctrl">
+      <div class="seg" role="group" aria-label="Tier"><button id="tA">Tier A</button><button id="tB">Tier B</button></div>
+      <button class="btn" id="delBtn" style="padding:9px 16px;font-size:13px">Xóa người này</button>
+    </div>
+    <p class="tip">Bấm vào tên để đổi tên</p>
+  </aside>
+</main>
+<input type="file" id="file" accept="image/*" multiple hidden>
+<input type="file" id="logoFile" accept="image/*" hidden>
+<div id="toast" role="status"></div>
+<script>
+(function(){
+var MAX=20,TEAMS=10;
+var players=[],selId=null,rolling=false,assigned={},teams=[],uid=0,blocks={};
+var $=function(i){return document.getElementById(i)};
+var fileIn=$('file');
+function rnd(n){var a=new Uint32Array(1),lim=Math.floor(4294967296/n)*n,x;do{crypto.getRandomValues(a);x=a[0]}while(x>=lim);return x%n}
+function shuffle(arr){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=rnd(i+1),t=a[i];a[i]=a[j];a[j]=t}return a}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function byId(id){for(var i=0;i<players.length;i++)if(players[i].id===id)return players[i];return null}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function toast(t){var e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(function(){e.style.display='none'},3600)}
+function emptyTeams(){teams=[];for(var i=0;i<TEAMS;i++)teams.push([null,null]);assigned={};$('bench').textContent=''}
+emptyTeams();
+function teamOf(id){for(var t=0;t<TEAMS;t++)if(teams[t][0]===id||teams[t][1]===id)return t;return -1}
+function bkey(a,b){return Math.min(a,b)+'-'+Math.max(a,b)}
+function ids(tier){return players.filter(function(p){return p.tier===tier}).map(function(p){return p.id})}
+
+function addFiles(list){
+  var files=Array.prototype.slice.call(list).filter(function(f){return /^image\//.test(f.type)});
+  if(files.length>MAX-players.length)toast('Tối đa '+MAX+' người');
+  files.slice(0,MAX-players.length).forEach(function(f){
+    var r=new FileReader();
+    r.onload=function(){
+      if(players.length>=MAX)return;
+      var tier=ids('A').length<=ids('B').length?'A':'B';
+      players.push({id:++uid,name:f.name.replace(/\.[^.]+$/,'').slice(0,20),src:r.result,tier:tier});
+      if(selId===null)selId=uid;render();
+    };
+    r.readAsDataURL(f);
+  });
+  fileIn.value='';
+}
+function pickFile(){if(!rolling)fileIn.click()}
+
+function renderRoster(spin){
+  var h='';
+  for(var i=0;i<MAX;i++){
+    var p=players[i];
+    h+=p?'<button class="cell'+(p.id===selId?' sel':'')+(assigned[p.id]?' done':'')+(p.id===spin?' spin':'')+'" data-id="'+p.id+'" aria-label="'+esc(p.name)+' tier '+p.tier+'"><img src="'+p.src+'" alt=""><span class="tb '+p.tier+'">'+p.tier+'</span><div class="nm">'+esc(p.name)+'</div></button>'
+      :'<button class="cell add" data-add="1" aria-label="Thêm ảnh">+</button>';
+  }
+  $('roster').innerHTML=h;
+}
+function renderTeams(){
+  var cur=teamOf(selId),h='';
+  for(var t=0;t<TEAMS;t++){
+    var a=byId(teams[t][0]),b=byId(teams[t][1]);
+    h+='<button class="tslot'+(t===cur?' cur':'')+'" data-team="'+t+'" aria-label="Đội '+(t+1)+'">'
+      +((a||b)?(a?'<img src="'+a.src+'" alt="">':'<em></em>')+(b?'<img src="'+b.src+'" alt="">':'<em></em>')+'<i>'+(t+1)+'</i>':'+')+'</button>';
+  }
+  $('teams').innerHTML=h;
+}
+function renderHero(){
+  var p=byId(selId);
+  $('pic').innerHTML=p?'<img src="'+p.src+'" alt="'+esc(p.name)+'">':'<div class="empty">Tải ảnh vận động viên lên để bắt đầu</div>';
+  var n=$('pname');if(document.activeElement!==n)n.textContent=p?p.name:'';
+  var t=teamOf(selId),h='';
+  if(p){
+    h+='<span class="chip k">Tier '+p.tier+'</span>';
+    if(t>=0){var o=teams[t][0]===selId?teams[t][1]:teams[t][0],q=byId(o);h+='<span class="chip">Đội '+(t+1)+'</span>'+(q?'<span class="chip w">Cặp với '+esc(q.name)+'</span>':'')}
+  }
+  $('chips').innerHTML=h;
+  $('tA').className=p&&p.tier==='A'?'on':'';$('tB').className=p&&p.tier==='B'?'on':'';
+}
+function renderPanels(){
+  var A=ids('A'),B=ids('B'),n=Math.min(A.length,B.length,TEAMS);
+  $('tcount').textContent='Tier A: '+A.length+' · Tier B: '+B.length+' · Số đội: '+n+(A.length!==B.length?' (dự bị '+(players.length-2*n)+' người)':'');
+  var va=$('selA').value,vb=$('selB').value;
+  function opts(arr,tier,v){return '<option value="">Tier '+tier+'...</option>'+arr.map(function(id){return '<option value="'+id+'"'+(String(id)===v?' selected':'')+'>'+esc(byId(id).name)+'</option>'}).join('')}
+  $('selA').innerHTML=opts(A,'A',va);$('selB').innerHTML=opts(B,'B',vb);
+  var h='';
+  Object.keys(blocks).forEach(function(k){
+    var b=blocks[k],x=byId(b[0]),y=byId(b[1]);if(!x||!y)return;
+    h+='<div class="bitem"><span>'+esc(x.name)+' ✕ '+esc(y.name)+'</span><button data-k="'+k+'" aria-label="Bỏ chặn">×</button></div>';
+  });
+  $('blist').innerHTML=h;
+}
+function render(spin){
+  renderRoster(spin);renderTeams();renderHero();renderPanels();
+  var n=players.length;
+  $('count').textContent=n+'/'+MAX;
+  var pairs=Math.min(ids('A').length,ids('B').length);
+  $('goBtn').disabled=rolling||pairs<1;$('resetBtn').disabled=rolling;$('delBtn').disabled=rolling||!n;
+  $('tierRnd').disabled=rolling||!n;$('blockBtn').disabled=rolling;
+}
+function blocked(a,b){return !!blocks[bkey(a,b)]}
+function match(A,B){
+  A=shuffle(A);var used={},res=[];
+  function go(i){
+    if(i===A.length)return true;
+    var c=shuffle(B);
+    for(var k=0;k<c.length;k++){
+      var b=c[k];if(used[b]||blocked(A[i],b))continue;
+      used[b]=1;res.push([A[i],b]);
+      if(go(i+1))return true;
+      res.pop();used[b]=0;
+    }
+    return false;
+  }
+  return go(0)?res:null;
+}
+function plan(){
+  var A=ids('A'),B=ids('B'),n=Math.min(A.length,B.length,TEAMS);
+  for(var tries=0;tries<400;tries++){
+    var pa=shuffle(A).slice(0,n),pb=shuffle(B).slice(0,n),r=match(pa,pb);
+    if(r)return shuffle(r);
+  }
+  return null;
+}
+async function roll(){
+  if(rolling)return;
+  var pairs=plan();
+  if(!pairs){toast('Không thể chia: các cặp bị chặn làm không còn cách ghép nào. Hãy bỏ bớt cặp chặn.');return}
+  rolling=true;emptyTeams();render();
+  var remA=pairs.map(function(p){return p[0]}),remB=pairs.map(function(p){return p[1]});
+  async function reveal(id,rem,t,slot){
+    var spins=9+rnd(7);
+    for(var k=0;k<spins;k++){var rid=rem[rnd(rem.length)];selId=rid;renderRoster(rid);renderHero();await sleep(50+k*12)}
+    selId=id;rem.splice(rem.indexOf(id),1);assigned[id]=true;teams[t][slot]=id;render(id);await sleep(380);
+  }
+  for(var t=0;t<pairs.length;t++){
+    await reveal(pairs[t][0],remA,t,0);
+    await reveal(pairs[t][1],remB,t,1);
+  }
+  var inTeam={};pairs.forEach(function(p){inTeam[p[0]]=1;inTeam[p[1]]=1});
+  var bench=players.filter(function(p){return !inTeam[p.id]}).map(function(p){return p.name});
+  rolling=false;render();
+  $('bench').textContent=bench.length?'Dự bị (không có người cặp): '+bench.join(', '):'';
+  toast('Đã chia xong '+pairs.length+' đội!');
+}
+$('roster').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||rolling)return;if(b.dataset.add){pickFile();return}selId=+b.dataset.id;render()});
+$('teams').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||rolling)return;var t=teams[+b.dataset.team],id=t[0]||t[1];if(id){selId=id;render()}});
+$('pname').addEventListener('input',function(e){var p=byId(selId);if(!p)return;p.name=e.target.textContent.slice(0,20)||'Không tên';renderRoster();renderTeams();renderPanels()});
+$('pname').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();e.target.blur()}});
+$('pname').addEventListener('blur',renderHero);
+function setTier(t){var p=byId(selId);if(!p||rolling)return;p.tier=t;emptyTeams();render()}
+$('tA').addEventListener('click',function(){setTier('A')});
+$('tB').addEventListener('click',function(){setTier('B')});
+$('tierRnd').addEventListener('click',function(){
+  if(rolling||!players.length)return;
+  var n=parseInt($('nA').value,10);
+  if(isNaN(n)||n<0||n>players.length){toast('Số người tier A phải từ 0 đến '+players.length);return}
+  var order=shuffle(players.map(function(p){return p.id}));
+  players.forEach(function(p){p.tier=order.indexOf(p.id)<n?'A':'B'});
+  emptyTeams();render();toast('Đã chia ngẫu nhiên '+n+' người tier A, '+(players.length-n)+' người tier B');
+});
+$('blockBtn').addEventListener('click',function(){
+  var a=+$('selA').value,b=+$('selB').value;
+  if(!a||!b){toast('Chọn một người tier A và một người tier B');return}
+  blocks[bkey(a,b)]=[a,b];emptyTeams();render();
+});
+$('blist').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;delete blocks[b.dataset.k];render()});
+$('delBtn').addEventListener('click',function(){
+  if(rolling)return;var id=selId;
+  players=players.filter(function(p){return p.id!==id});
+  Object.keys(blocks).forEach(function(k){if(blocks[k][0]===id||blocks[k][1]===id)delete blocks[k]});
+  emptyTeams();selId=players.length?players[0].id:null;render();
+});
+$('addBtn').addEventListener('click',pickFile);
+$('goBtn').addEventListener('click',roll);
+$('resetBtn').addEventListener('click',function(){if(!rolling){emptyTeams();render()}});
+fileIn.addEventListener('change',function(e){addFiles(e.target.files)});
+$('logoBtn').addEventListener('click',function(){$('logoFile').click()});
+$('logoFile').addEventListener('change',function(e){
+  var f=e.target.files[0];if(!f||!/^image\//.test(f.type))return;
+  var r=new FileReader();r.onload=function(){var b=$('logoBtn');b.className='logobtn has';b.innerHTML='<img src="'+r.result+'" alt="Logo">'};
+  r.readAsDataURL(f);e.target.value='';
+});
+document.addEventListener('dragover',function(e){e.preventDefault()});
+document.addEventListener('drop',function(e){e.preventDefault();if(!rolling&&e.dataTransfer)addFiles(e.dataTransfer.files)});
+render();
+})();
+</script>
+</body>
+</html>
