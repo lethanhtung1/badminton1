@@ -46,13 +46,14 @@ main{display:grid;grid-template-columns:1fr minmax(320px,440px);gap:32px;max-wid
 .tip{font-size:13px;color:var(--mute);text-align:center;margin:10px 0 0}
 h3{font:700 16px "Outfit",sans-serif;margin:0 0 12px;display:flex;justify-content:space-between;align-items:baseline}
 h3 span{font:400 13px "DM Sans",sans-serif;color:var(--mute)}
-.teams{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}
+.teams{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:8px}
 .bench{font-size:13px;color:var(--mute);min-height:18px;margin-bottom:20px}
-.tslot{position:relative;aspect-ratio:3/4;border-radius:18px;border:0;background:var(--soft);display:flex;overflow:hidden;padding:0;color:#b9b3a2;align-items:center;justify-content:center;font:500 34px "Outfit",sans-serif}
+.tslot{position:relative;aspect-ratio:3/2;border-radius:22px;border:0;background:var(--soft);display:flex;gap:3px;overflow:hidden;padding:0;color:#b9b3a2;align-items:center;justify-content:center;font:500 40px "Outfit",sans-serif}
+.tslot:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 6px)}
 .tslot.cur{box-shadow:0 0 0 3px var(--ink)}
-.tslot img{width:50%;height:100%;object-fit:cover;display:block}
-.tslot em{width:50%;height:100%;background:var(--line)}
-.tslot i{position:absolute;left:6px;bottom:6px;background:var(--yellow);color:var(--ink);font:700 12px/1 "Outfit",sans-serif;font-style:normal;min-width:22px;height:22px;border-radius:999px;display:grid;place-items:center;padding:0 6px}
+.tslot img{flex:1 1 0;min-width:0;width:auto;height:100%;object-fit:cover;display:block}
+.tslot em{flex:1 1 0;min-width:0;height:100%;background:var(--line)}
+.tslot i{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);background:var(--yellow);color:var(--ink);font:700 13px/1 "Outfit",sans-serif;font-style:normal;height:26px;border-radius:999px;display:grid;place-items:center;padding:0 13px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .roster{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
 .cell{position:relative;aspect-ratio:3/4;border-radius:16px;border:0;background:var(--soft);overflow:hidden;padding:0;color:#b9b3a2;font:500 28px "Outfit",sans-serif;transition:transform .15s}
 .cell img{width:100%;height:100%;object-fit:cover;display:block}
@@ -120,6 +121,7 @@ body.view #pname{cursor:default}
 .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#e5322d;animation:blink 1.4s ease-in-out infinite}
 @keyframes blink{50%{opacity:.25}}
 body.view .live{display:inline-flex}
+@media(max-width:480px){.teams{grid-template-columns:1fr}.tslot:last-child:nth-child(odd){width:100%}}
 </style>
 </head>
 <body>
@@ -193,7 +195,7 @@ var isAdmin=false;
 try{var q=new URLSearchParams(location.search).get('admin');if(q)localStorage.setItem('bd_owner',q);isAdmin=localStorage.getItem('bd_owner')===OWNER_CODE}catch(e){}
 if(!isAdmin)document.body.classList.add('view');
 var db=null,ready=false,synced={},syncedLogo='',pend=null,saveT=null,writeQ=Promise.resolve(),remoteRolling=false,curAnim=null,animK=0,animBusy=false,lastK=0,stash=null;
-var MAX=20,TEAMS=10;
+var MAX=20,TEAMS=5;
 var players=[],selId=null,rolling=false,assigned={},teams=[],uid=0,blocks={};
 var $=function(i){return document.getElementById(i)};
 var fileIn=$('file');
@@ -254,7 +256,7 @@ function renderTeams(){
   for(var t=0;t<TEAMS;t++){
     var a=byId(teams[t][0]),b=byId(teams[t][1]);
     h+='<button class="tslot'+(t===cur?' cur':'')+'" data-team="'+t+'" aria-label="Đội '+(t+1)+'">'
-      +((a||b)?(a?'<img src="'+a.src+'" alt="">':'<em></em>')+(b?'<img src="'+b.src+'" alt="">':'<em></em>')+'<i>'+(t+1)+'</i>':'+')+'</button>';
+      +((a||b)?(a?'<img src="'+a.src+'" alt="">':'<em></em>')+(b?'<img src="'+b.src+'" alt="">':'<em></em>')+'<i>Đội '+(t+1)+'</i>':'+')+'</button>';
   }
   $('teams').innerHTML=h;
 }
@@ -272,7 +274,7 @@ function renderHero(){
 }
 function renderPanels(){
   var A=ids('A'),B=ids('B'),n=Math.min(A.length,B.length,TEAMS);
-  $('tcount').textContent='Tier A: '+A.length+' · Tier B: '+B.length+' · Số đội: '+n+(A.length!==B.length?' (dự bị '+(players.length-2*n)+' người)':'');
+  $('tcount').textContent='Tier A: '+A.length+' · Tier B: '+B.length+' · Số đội: '+n+(players.length-2*n>0?' (dự bị '+(players.length-2*n)+' người)':'');
   var va=$('selA').value,vb=$('selB').value;
   function opts(arr,tier,v){return '<option value="">Tier '+tier+'...</option>'+arr.map(function(id){return '<option value="'+id+'"'+(String(id)===v?' selected':'')+'>'+esc(byId(id).name)+'</option>'}).join('')}
   $('selA').innerHTML=opts(A,'A',va);$('selB').innerHTML=opts(B,'B',vb);
@@ -334,7 +336,7 @@ async function roll(){
   var inTeam={};pairs.forEach(function(p){inTeam[p[0]]=1;inTeam[p[1]]=1});
   var bench=players.filter(function(p){return !inTeam[p.id]}).map(function(p){return p.name});
   rolling=false;render();
-  $('bench').textContent=bench.length?'Dự bị (không có người cặp): '+bench.join(', '):'';
+  $('bench').textContent=bench.length?'Dự bị (chưa vào đội): '+bench.join(', '):'';
   curAnim=null;save(true);toast('Đã chia xong '+pairs.length+' đội!');
 }
 $('roster').addEventListener('click',function(e){var b=e.target.closest('button');if(!b||rolling)return;if(b.dataset.add){pickFile();return}selId=+b.dataset.id;render()});
